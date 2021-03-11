@@ -22,38 +22,63 @@
 
 				// location of XML Bible files, must be on same web server
 				// that hosts this web page to avoid Cross-Domain request restrictions
-				biblePath = "/class/csc3004/XMLBible/"
+				biblePath = "/class/csc3004/XMLBible"
+
+				// Map of human-readable version identifiers to server Bible names.
+				bibles = {
+					"kjv": "kjv",
+					"web": "web",
+				}
 			}
 
-			function getresponse () {
-				// read input values from user
-				var b = document.getElementById('book').value;
-				var c = document.getElementById('chapter').value;
-				var v = parseInt(document.getElementById('verse').value);
+			// Get the server path to the book XML for the specified bible version and book number.
+			function getBookPath(version, book) {
+				if(version in bibles) {
+					return biblePath + "/" + bibles[version] + "_by_book/" + book + ".xml";
+				}
+				else {
+					throw "no version";
+				}
+			}
 
-				// TODO: add code to select a version of the Bible based on user input
-				// (only KJV and WEB versions are available with XML files)
-				var XMLBook = biblePath + "kjv_by_book/" + b + ".xml";
-				xmlhttp.open("GET",XMLBook,false);
+			// Get the parsed book XML for the specified bible version and book number.
+			function getBookDoc(version, book) {
+				xmlhttp.open("GET", getBookPath(version, book), false);
 				xmlhttp.send();
-				xmlDoc = xmlhttp.responseXML;
+				return xmlhttp.responseXML;
+			}
 
-				var bookInfo = "<h6>Book retrieved from file: " + XMLBook + "</h6>";
+			function getResponse () {
+				// Get input values from the form.
+				var version = document.getElementById("version").value;
+				var b = document.getElementById("book").value;
+				var c = document.getElementById("chapter").value;
+				var v = parseInt(document.getElementById("verse").value);
+
+				xmlDoc = getBookDoc(version, b);
+
+				var bookInfo = "<h6>Book retrieved from file: " + getBookPath(version, b) + "</h6>";
 				document.all.headArea.innerHTML = "<h1><font color=blue>XML Bible Demo Output</font></h1>" + bookInfo;
 				try {
+					// Reset the display.
 					document.all.responseArea.innerHTML = " ";
-					vtext = getVerse(b,c,v);
-					document.all.responseArea.innerHTML += "<p>" +vtext+ "</p>";
+
+					// Show the verse.
+					var verseText = getVerse(b,c,v);
+					document.all.responseArea.innerHTML += "<p>" + verseText + "</p>";
 				}
 				catch(error) {
 					if (error == "no chapter") {
-					document.all.responseArea.innerHTML += "<b><i>No such chapter " +c+ "</i></b>";
+						document.all.responseArea.innerHTML += "<b><i>No such chapter " + c + "</i></b>";
 					}
-					if (error == "no verse") {
-						document.all.responseArea.innerHTML += "<b><i>No such verse " +v+ "</i></b>";
+					else if (error == "no verse") {
+						document.all.responseArea.innerHTML += "<b><i>No such verse " + v + "</i></b>";
+					}
+					else {
+						document.all.responseArea.innerHTML += "<b><i>" + error + "<i></b>";
 					}
 				}
-			} // end getResponse
+			}
 
 			function getVerse(book,chapter,verse) {
 				var verseOutput = xmlDoc.getElementsByTagName("book")[0].getAttribute("name");
@@ -73,7 +98,7 @@
 					verseOutput += nodeStr;
 				}
 				return(verseOutput);
-			} // end getVerse
+			}
 
 			function getNodeString(node) {
 				var result = "";
@@ -81,7 +106,7 @@
 					result += node.nodeValue;
 					result += " ";
 				}
-				if (node.nodeType == 1) { // type 1: tag
+				else if (node.nodeType == 1) { // type 1: tag
 					if (node.nodeName == "em") {
 						result += "<i>";
 						result += node.childNodes[0].nodeValue;
@@ -95,20 +120,32 @@
 						}
 						result += "</span> ";
 					}
-					else if (node.nodeName=="strongs") {
+					else if (node.nodeName == "strongs") {
 						if (node.childNodes[0] != null) {
 							// show the text of the word that is inside the strong tag
 							result += node.childNodes[0].nodeValue;
 						}
-						// TO DO: use hasAttribute(attributename) to determine
-						// if the strongs tag has attributes named hebrew, greek, or number
-						// When the attribute exists, add the strong number to the HTML result
-						// as the contents of a <sub> tag, which will display it as a subscript
-						// after the word.
+
+						// Get the Strong's number.
+						var number = 0;
+
+						if(node.hasAttribute("hebrew")) {
+							number = node.getAttribute("hebrew");
+						}
+						else if(node.hasAttribute("greek")) {
+							number = node.getAttribute("greek");
+						}
+						else if(node.hasAttribute("number")) {
+							number = node.getAttribute("number");
+						}
+
+						result += "<sub>" + number + "</sub>";
+
+						result += " ";
 					}
 				}
 				return(result);
-			} // end getNodeString
+			}
 		</script>
 	</head>
 
@@ -116,6 +153,15 @@
 		<form onsubmit="return false">
 			<h1>Bible Search from XML files</h1>
 			<table>
+				<TR>
+					<TD ALIGN=RIGHT VALIGN=TOP>Bible Version</TD>
+					<TD ALIGN=LEFT VALIGN=TOP>
+						<select name="version" id="version">
+							<option value="kjv">King James Version
+							<option value="web">World English Bible
+						</select>
+					</TD>
+				</TR>
 				<TR>
 					<TD ALIGN=RIGHT VALIGN=TOP>Book Number</TD>
 					<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="book" TYPE="text" MAXLENGTH=2  id=book></TD>
@@ -130,7 +176,7 @@
 				</TR>
 			</table>
 			<p>
-				<input type="submit" onclick="javascript: getresponse()" name="submit" value="Submit" />
+				<input type="submit" onclick="javascript: getResponse()" name="submit" value="Submit" />
 			</p>
 		</form>
 		<div id = "headArea">
