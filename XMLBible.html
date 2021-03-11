@@ -62,13 +62,28 @@
 					// Reset the display.
 					document.all.responseArea.innerHTML = " ";
 
+					// Check top level error.
+					if(xmlDoc == null)
+						throw "no book";
+
 					// Show the verses.
+					var current_chapter = -1;
 					for(const verse of getVerses(b, c, v, nv)) {
-						document.all.responseArea.innerHTML += "<p>" + verse["text"] + "</p>";
+						// Display header if the chapter changes.
+						if(verse["c"] != current_chapter) {
+							document.all.responseArea.innerHTML += "<h2>" + getChapterHeader(verse["b"], verse["c"]) + "</h2>";
+							current_chapter = verse["c"];
+						}
+
+						// Display the verse.
+						document.all.responseArea.innerHTML += "<p><em>" + verse["v"] + ".</em> " + verse["text"] + "</p>";
 					}
 				}
 				catch(error) {
-					if (error == "no chapter") {
+					if (error == "no book") {
+						document.all.responseArea.innerHTML += "<b><i>No such book " + b + "</i></b>";
+					}
+					else if (error == "no chapter") {
 						document.all.responseArea.innerHTML += "<b><i>No such chapter " + c + "</i></b>";
 					}
 					else if (error == "no verse") {
@@ -88,9 +103,22 @@
 				return next;
 			}
 
+			function getChapterHeader(b, c) {
+				var book = xmlDoc.getElementsByTagName("book")[0];
+				if (book == null)
+					throw "no book";
+				var chapter = book.getElementsByTagName("chapter")[c - 1];
+				if(chapter == null)
+					throw "no chapter";
+				return book.getAttribute("name") + " " + chapter.getAttribute("number");
+			}
+
 			function getVerses(b, c, v, count) {
 				var result = [];
 				var book = xmlDoc.getElementsByTagName("book")[0];
+				if (book == null)
+					throw "no book";
+
 				var chapter = book.getElementsByTagName("chapter")[c - 1];
 				if (chapter == null)
 					throw "no chapter";
@@ -99,11 +127,14 @@
 				if (verse == null)
 					throw "no verse";
 
+				var b_current = parseInt(book.getAttribute("number"));
+				var c_current = c;
+
 				for(var i = 0; i < count; i++) {
 					var verseDescriptor = {
-						"b": parseInt(book.getAttribute("number").value),
-						"c": parseInt(chapter.getAttribute("number").value),
-						"v": parseInt(verse.getAttribute("number").value),
+						"b": b,
+						"c": c_current,
+						"v": parseInt(verse.getAttribute("number")),
 						"text": "",
 					};
 
@@ -120,6 +151,7 @@
 							break;
 						}
 						else {
+							c_current = parseInt(chapter.getAttribute("number"));
 							verse = chapter.getElementsByTagName("verse")[0];
 							if(verse == null) {
 								break;
