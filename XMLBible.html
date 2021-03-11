@@ -22,13 +22,13 @@
 
 				// location of XML Bible files, must be on same web server
 				// that hosts this web page to avoid Cross-Domain request restrictions
-				biblePath = "/class/csc3004/XMLBible"
+				biblePath = "/class/csc3004/XMLBible";
 
 				// Map of human-readable version identifiers to server Bible names.
 				bibles = {
 					"kjv": "kjv",
 					"web": "web",
-				}
+				};
 			}
 
 			// Get the server path to the book XML for the specified bible version and book number.
@@ -54,18 +54,18 @@
 				var b = document.getElementById("book").value;
 				var c = document.getElementById("chapter").value;
 				var v = parseInt(document.getElementById("verse").value);
+				var nv = parseInt(document.getElementById("versenum").value);
 
 				xmlDoc = getBookDoc(version, b);
 
-				var bookInfo = "<h6>Book retrieved from file: " + getBookPath(version, b) + "</h6>";
-				document.all.headArea.innerHTML = "<h1><font color=blue>XML Bible Demo Output</font></h1>" + bookInfo;
 				try {
 					// Reset the display.
 					document.all.responseArea.innerHTML = " ";
 
-					// Show the verse.
-					var verseText = getVerse(b,c,v);
-					document.all.responseArea.innerHTML += "<p>" + verseText + "</p>";
+					// Show the verses.
+					for(const verse of getVerses(b, c, v, nv)) {
+						document.all.responseArea.innerHTML += "<p>" + verse["text"] + "</p>";
+					}
 				}
 				catch(error) {
 					if (error == "no chapter") {
@@ -75,38 +75,71 @@
 						document.all.responseArea.innerHTML += "<b><i>No such verse " + v + "</i></b>";
 					}
 					else {
-						document.all.responseArea.innerHTML += "<b><i>" + error + "<i></b>";
+						document.all.responseArea.innerHTML += "<b><i>Internal error: " + error + "<i></b>";
 					}
 				}
 			}
 
-			function getVerse(book,chapter,verse) {
-				var verseOutput = xmlDoc.getElementsByTagName("book")[0].getAttribute("name");
-				var c = xmlDoc.getElementsByTagName("chapter")[chapter-1];
-				if (c==null)
-					throw "no chapter";
-				verseOutput += " ";
-				verseOutput += c.getAttribute("number");
-				var v = c.getElementsByTagName("verse")[verse-1]
-				if (v==null)
-					throw "no verse";
-				verseOutput += ":";
-				verseOutput += v.getAttribute("number");
-				verseOutput += " ";
-				for (j=0; j < v.childNodes.length; j++) {
-					var nodeStr = getNodeString(v.childNodes[j]);
-					verseOutput += nodeStr;
+			function getNextSiblingOfTag(element, tag) {
+				var next = element.nextSibling;
+				while(next != null && next.nodeType != 1 && next.nodeName != tag) {
+					next = next.nextSibling;
 				}
-				return(verseOutput);
+				return next;
+			}
+
+			function getVerses(b, c, v, count) {
+				var result = [];
+				var book = xmlDoc.getElementsByTagName("book")[0];
+				var chapter = book.getElementsByTagName("chapter")[c - 1];
+				if (chapter == null)
+					throw "no chapter";
+
+				var verse = chapter.getElementsByTagName("verse")[v - 1]
+				if (verse == null)
+					throw "no verse";
+
+				for(var i = 0; i < count; i++) {
+					var verseDescriptor = {
+						"b": parseInt(book.getAttribute("number").value),
+						"c": parseInt(chapter.getAttribute("number").value),
+						"v": parseInt(verse.getAttribute("number").value),
+						"text": "",
+					};
+
+					for(const node of verse.childNodes) {
+						verseDescriptor.text += getNodeString(node);
+					}
+
+					result.push(verseDescriptor);
+
+					verse = getNextSiblingOfTag(verse, "verse");
+					if(verse == null) {
+						chapter = getNextSiblingOfTag(chapter, "chapter");
+						if(chapter == null) {
+							break;
+						}
+						else {
+							verse = chapter.getElementsByTagName("verse")[0];
+							if(verse == null) {
+								break;
+							}
+						}
+					}
+				}
+
+				return result;
 			}
 
 			function getNodeString(node) {
 				var result = "";
-				if (node.nodeType == 3) { // type 3: text node
+				if (node.nodeType == 3) {
+					// type 3: text node, just display
 					result += node.nodeValue;
 					result += " ";
 				}
-				else if (node.nodeType == 1) { // type 1: tag
+				else if (node.nodeType == 1) {
+					// type 1: tag, parse it
 					if (node.nodeName == "em") {
 						result += "<i>";
 						result += node.childNodes[0].nodeValue;
@@ -121,30 +154,33 @@
 						result += "</span> ";
 					}
 					else if (node.nodeName == "strongs") {
+						// Word with a Strong's reference.
 						if (node.childNodes[0] != null) {
-							// show the text of the word that is inside the strong tag
+							// Show the word.
 							result += node.childNodes[0].nodeValue;
 						}
 
-						// Get the Strong's number.
-						var number = 0;
+						if(document.getElementById("include_strongs").checked) {
+							// Get and display the Strong's number.
+							var number = 0;
 
-						if(node.hasAttribute("hebrew")) {
-							number = node.getAttribute("hebrew");
-						}
-						else if(node.hasAttribute("greek")) {
-							number = node.getAttribute("greek");
-						}
-						else if(node.hasAttribute("number")) {
-							number = node.getAttribute("number");
-						}
+							if(node.hasAttribute("hebrew")) {
+								number = node.getAttribute("hebrew");
+							}
+							else if(node.hasAttribute("greek")) {
+								number = node.getAttribute("greek");
+							}
+							else if(node.hasAttribute("number")) {
+								number = node.getAttribute("number");
+							}
 
-						result += "<sub>" + number + "</sub>";
+							result += "<sub>" + number + "</sub>";
+						}
 
 						result += " ";
 					}
 				}
-				return(result);
+				return result;
 			}
 		</script>
 	</head>
@@ -174,13 +210,19 @@
 					<TD ALIGN=RIGHT VALIGN=TOP>Verse</TD>
 					<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="verse" TYPE="text" MAXLENGTH=3 id=verse></TD>
 				</TR>
+				<TR>
+					<TD ALIGN=RIGHT VALIGN=TOP>Number of Verses</TD>
+					<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="versenum" TYPE="text" MAXLENGTH=3 id=versenum></TD>
+				</TR>
+				<TR>
+					<TD ALIGN=RIGHT VALIGN=TOP>Include Strong's References</TD>
+					<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="include_strongs" id=include_strongs type="checkbox"></TD>
+				</TR>
 			</table>
 			<p>
 				<input type="submit" onclick="javascript: getResponse()" name="submit" value="Submit" />
 			</p>
 		</form>
-		<div id = "headArea">
-		</div>
 		<div id = "responseArea">
 		</div>
 	</body>
