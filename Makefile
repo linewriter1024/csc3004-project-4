@@ -5,6 +5,3 @@ all: $(PutHTML)
 
 $(PutHTML): XMLBible.html
 	cp $< $@
-
-clean:
-	rm -f $(PutHTML)
