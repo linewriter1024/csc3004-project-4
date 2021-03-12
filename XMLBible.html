@@ -143,16 +143,13 @@
 
 				// Fetch at most <count> verses.
 				for(var i = 0; i < count; i++) {
-					// Verse descriptor, includes reference numbers and text.
-					var verseDescriptor = {
+					// Push a verse descriptor with reference numbers and rendered text.
+					result.push({
 						"b": b,
 						"c": c_current,
 						"v": parseInt(verse.getAttribute("number")),
 						"text": renderVerse(verse),
-					};
-
-					// Add the descriptor to be returned.
-					result.push(verseDescriptor);
+					});
 
 					// Find the next verse, or break out if there's no next verse.
 					verse = getNextSiblingOfTag(verse, "verse");
