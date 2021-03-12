@@ -56,7 +56,8 @@
 				var v = parseInt(document.getElementById("verse").value);
 				var nv = parseInt(document.getElementById("versenum").value);
 
-				xmlDoc = getBookDoc(version, b);
+				// Get the XML doc for this request.
+				var xmlDoc = getBookDoc(version, b);
 
 				try {
 					// Reset the display.
@@ -68,10 +69,10 @@
 
 					// Show the verses.
 					var current_chapter = -1;
-					for(const verse of getVerses(b, c, v, nv)) {
+					for(const verse of getVerses(xmlDoc, b, c, v, nv)) {
 						// Display header if the chapter changes.
 						if(verse["c"] != current_chapter) {
-							document.all.responseArea.innerHTML += "<h2>" + getChapterHeader(verse["b"], verse["c"]) + "</h2>";
+							document.all.responseArea.innerHTML += "<h2>" + getChapterHeader(xmlDoc, verse["b"], verse["c"]) + "</h2>";
 							current_chapter = verse["c"];
 						}
 
@@ -103,7 +104,7 @@
 				return next;
 			}
 
-			function getChapterHeader(b, c) {
+			function getChapterHeader(xmlDoc, b, c) {
 				var book = xmlDoc.getElementsByTagName("book")[0];
 				if (book == null)
 					throw "no book";
@@ -113,52 +114,61 @@
 				return book.getAttribute("name") + " " + chapter.getAttribute("number");
 			}
 
-			function getVerses(b, c, v, count) {
+			// Get <count> verses starting at b:c:v.
+			// b is irrelevant here, as the book that is loaded in xmlDoc will always be b.
+			function getVerses(xmlDoc, b, c, v, count) {
+				// Array of verse descriptors to be returned.
 				var result = [];
+
+				// Start out at the specified bible reference.
+
+				// Current book element.
+				// Always the first book element in the xmlDoc.
 				var book = xmlDoc.getElementsByTagName("book")[0];
 				if (book == null)
 					throw "no book";
 
+				// Current chapter element.
 				var chapter = book.getElementsByTagName("chapter")[c - 1];
 				if (chapter == null)
 					throw "no chapter";
 
+				// Current verse element.
 				var verse = chapter.getElementsByTagName("verse")[v - 1]
 				if (verse == null)
 					throw "no verse";
 
-				var b_current = parseInt(book.getAttribute("number"));
+				// Current chapter number.
 				var c_current = c;
 
+				// Fetch at most <count> verses.
 				for(var i = 0; i < count; i++) {
+					// Verse descriptor, includes reference numbers and text.
 					var verseDescriptor = {
 						"b": b,
 						"c": c_current,
 						"v": parseInt(verse.getAttribute("number")),
-						"text": "",
+						"text": renderVerse(verse),
 					};
 
-					// Render each node inside the verse.
-					// Will not include leading space if it's just punctuation.
-					for(const node of verse.childNodes) {
-						var rendering = getNodeRendered(node);
-						verseDescriptor["text"] += (rendering["punctuation"] ? "" : " ") + rendering["text"];
-					}
-
-					verseDescriptor["text"] = verseDescriptor["text"].trim();
-
+					// Add the descriptor to be returned.
 					result.push(verseDescriptor);
 
+					// Find the next verse, or break out if there's no next verse.
 					verse = getNextSiblingOfTag(verse, "verse");
 					if(verse == null) {
+						// No next verse, try next chapter.
 						chapter = getNextSiblingOfTag(chapter, "chapter");
 						if(chapter == null) {
+							// No next chapter, we're done.
 							break;
 						}
 						else {
+							// Update chapter number and get first verse of the new chapter.
 							c_current = parseInt(chapter.getAttribute("number"));
 							verse = chapter.getElementsByTagName("verse")[0];
 							if(verse == null) {
+								// No first verse -- weird; we're done here.
 								break;
 							}
 						}
@@ -168,9 +178,38 @@
 				return result;
 			}
 
+			// Get a verse element rendered as HTML with automatically processed whitespacing.
+			function renderVerse(verse) {
+				var text = "";
+
+				// Render each node inside the verse.
+				// Parse punctuation with regex to perform the correct spacing.
+				var was_punctuation_before = true; // Was there punctuation before the current node?
+				for(const node of verse.childNodes) {
+					// Render the node.
+					var rendering = getNodeRendered(node);
+
+					// Check if this is punctuation that needs no space before it.
+					var is_punctuation = /^[,.?\-"':;” ]/.test(rendering["base_text"]);
+
+					// Place the node into the text.
+					// Including leading space unless this node is punctuation that needs no space or has punctuation that doesn't want a trailing space before it.
+					text += ((is_punctuation || was_punctuation_before) ? "" : " ") + rendering["text"];
+
+					// Check if this node means that there doesn't need to be a space for the next node (opening quote, for example.)
+					was_punctuation_before = /[“ ]+$/.test(rendering["base_text"]);
+				}
+
+				return text;
+			}
+
+			// Get a rendering of the text inside the node.
 			function getNodeRendered(node) {
+				// Fully rendered HTML result.
 				var result = "";
+				// Only the text parts.
 				var base_result = "";
+
 				if (node.nodeType == 3) {
 					// type 3: text node, just display
 					result += node.nodeValue;
@@ -186,6 +225,7 @@
 					}
 					else if (node.nodeName == "STYLE") {
 						result += '<span style="' + node.getAttribute("css") + '">';
+						// Recursively render everything that needs to be styled.
 						for (n=0; n < node.childNodes.length; n++) {
 							var rendered = getNodeRendered(node.childNodes[n]);
 							base_result += rendered["base_text"];
@@ -219,10 +259,11 @@
 						}
 					}
 				}
+
+				// Return all information about the rendering & results.
 				return {
 					"text": result,
 					"base_text": base_result,
-					"punctuation": /[,.?\-"']/.test(base_result),
 				};
 			}
 		</script>
