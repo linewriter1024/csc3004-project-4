@@ -56,12 +56,12 @@
 				var v = parseInt(document.getElementById("verse").value);
 				var nv = parseInt(document.getElementById("versenum").value);
 
-				// Get the XML doc for this request.
-				var xmlDoc = getBookDoc(version, b);
+				// Reset the display.
+				document.all.responseArea.innerHTML = " ";
 
 				try {
-					// Reset the display.
-					document.all.responseArea.innerHTML = " ";
+					// Get the XML doc for this request.
+					var xmlDoc = getBookDoc(version, b);
 
 					// Check top level error.
 					if(xmlDoc == null)
