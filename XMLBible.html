@@ -11,15 +11,6 @@
 		<title>XML Bible Demo - MVNU</title>
 		<script type="text/javascript">
 			function setup() {
-				if (window.XMLHttpRequest) {
-					// Modern browsers (IE7+, Chrome, Firefox, etc.)
-					xmlhttp = new XMLHttpRequest();
-				}
-				else {
-					// Ancient browsers (IE5-6)
-					xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
-				}
-
 				// location of XML Bible files, must be on same web server
 				// that hosts this web page to avoid Cross-Domain request restrictions
 				biblePath = "/class/csc3004/XMLBible";
@@ -31,6 +22,25 @@
 				};
 			}
 
+			function makeXMLHttpRequest() {
+				if (window.XMLHttpRequest) {
+					// Modern browsers (IE7+, Chrome, Firefox, etc.)
+					return new XMLHttpRequest();
+				}
+				else {
+					// Ancient browsers (IE5-6)
+					return new ActiveXObject("Microsoft.XMLHTTP");
+				}
+			}
+
+			// Get XML from a path on the web server.
+			function getXMLDoc(path) {
+				var xmlhttp = makeXMLHttpRequest();
+				xmlhttp.open("GET", path, false);
+				xmlhttp.send();
+				return xmlhttp.responseXML;
+			}
+
 			// Get the server path to the book XML for the specified bible version and book number.
 			function getBookPath(version, book) {
 				if(version in bibles) {
@@ -39,13 +49,6 @@
 				else {
 					throw "no version";
 				}
-			}
-
-			// Get the parsed book XML for the specified bible version and book number.
-			function getBookDoc(version, book) {
-				xmlhttp.open("GET", getBookPath(version, book), false);
-				xmlhttp.send();
-				return xmlhttp.responseXML;
 			}
 
 			function getResponse () {
@@ -61,7 +64,7 @@
 
 				try {
 					// Get the XML doc for this request.
-					var xmlDoc = getBookDoc(version, b);
+					var xmlDoc = getXMLDoc(getBookPath(version, b));
 
 					// Check top level error.
 					if(xmlDoc == null)
