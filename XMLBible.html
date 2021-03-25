@@ -51,6 +51,27 @@
 				}
 			}
 
+			// Get the server path to the Strong's dictionary XML for the specified language and Strong's number.
+			function getStrongsPath(language, number) {
+				// Get file index number.
+				// 0 is 1-100, 1 is 101-200, etc.
+				var indexNumber = Math.trunc((number - 1) / 100);
+				if(language == "hebrew") {
+					return biblePath + "/" + "heb_strongs/heb" + indexNumber + ".xml";
+				}
+				else if(language == "greek") {
+					return biblePath + "/" + "greek_strongs/grk" + indexNumber + ".xml";
+				}
+				else {
+					throw ("bad language: " + language);
+				}
+			}
+
+			// Get the index of a number in the appropriate Strong's dictionary list of item elements.
+			function getStrongsIndex(language, number) {
+				return (number - 1) % 100;
+			}
+
 			function getResponse () {
 				// Get input values from the form.
 				var version = document.getElementById("version").value;
@@ -151,7 +172,12 @@
 						"b": b,
 						"c": c_current,
 						"v": parseInt(verse.getAttribute("number")),
-						"text": renderVerse(verse),
+						// Rendered text with appropriate context.
+						"text": renderElement(verse, {
+							"type": "verse",
+							// Default language can be simply determined: if book < 40 (Matthew) then in OT so "hebrew", else in NT so "greek".
+							"language": (b < 40 ? "hebrew" : "greek"),
+						}),
 					});
 
 					// Find the next verse, or break out if there's no next verse.
@@ -178,8 +204,9 @@
 				return result;
 			}
 
-			// Get a verse element rendered as HTML with automatically processed whitespacing.
-			function renderVerse(verse) {
+			// Get an element rendered as HTML with automatically processed whitespacing.
+			// Passes render_context to getNodeRendered for rendering.
+			function renderElement(verse, render_context) {
 				var text = "";
 
 				// Render each node inside the verse.
@@ -187,7 +214,7 @@
 				var was_punctuation_before = true; // Was there punctuation before the current node?
 				for(const node of verse.childNodes) {
 					// Render the node.
-					var rendering = getNodeRendered(node);
+					var rendering = getNodeRendered(node, render_context);
 
 					// Check if this is punctuation that needs no space before it.
 					var is_punctuation = /^[,.?\-"':;” ]/.test(rendering["base_text"]);
@@ -203,8 +230,61 @@
 				return text;
 			}
 
-			// Get a rendering of the text inside the node.
-			function getNodeRendered(node) {
+			// Open a displayy of the Strong's reference for the language and number.
+			// Language will be either "hebrew" or "greek".
+			function openStrongs(language, number) {
+				try {
+					// Get the XML Dictionary.
+					var dictionary = getXMLDoc(getStrongsPath(language, number));
+					// Get the dictinoary entry.
+					var element = dictionary.getElementsByTagName("item")[getStrongsIndex(language, number)];
+
+					// Build the display from each sub element.
+					var text = "";
+					var render_context = {
+						"type": "strongs",
+						"language": language,
+
+					}
+
+					var strong_id = element.getElementsByTagName("strong_id")[0];
+					if(strong_id) {
+						text += "<h2>" + renderElement(strong_id, render_context) + "</h2>";
+					}
+
+					var title = element.getElementsByTagName("title")[0];
+					if(title) {
+						text += "<h2>" + renderElement(title, render_context) + "</h2>";
+					}
+
+					var transliteration = element.getElementsByTagName("transliteration")[0];
+					if(transliteration) {
+						text += "<p>Transliterated: " + renderElement(transliteration, render_context) + "</p>";
+					}
+
+					var pronunciation = element.getElementsByTagName("pronunciation")[0];
+					if(pronunciation) {
+						text += "<p>Pronounced: " + renderElement(pronunciation, render_context) + "</p>";
+					}
+
+					var description = element.getElementsByTagName("description")[0];
+					if(description) {
+						text += "<p>" + renderElement(description, render_context) + "</p>";
+					}
+
+					document.getElementById("strongsArea").innerHTML = text;
+				}
+				catch(error) {
+					document.getElementById("strongsArea").innerHTML = "<b><i>Internal error: " + error + "</i></b>";
+				}
+			}
+
+			/* Get a rendering of the text inside the node.
+			The render context specifies global attributes of the text being rendered.
+				type: "verse" or "strongs"
+				language: default language of any Strong's references, "greek" or "hebrew"
+			*/
+			function getNodeRendered(node, render_context) {
 				// Fully rendered HTML result.
 				var result = "";
 				// Only the text parts.
@@ -233,7 +313,7 @@
 						}
 						result += "</span>";
 					}
-					else if (node.nodeName == "strongs") {
+					else if (node.nodeName == "strongs" && render_context["type"] == "verse") {
 						// Word with a Strong's reference.
 						if (node.childNodes[0] != null) {
 							// Show the word.
@@ -242,20 +322,53 @@
 						}
 
 						if(document.getElementById("include_strongs").checked) {
-							// Get and display the Strong's number.
-							var number = 0;
+							// Get and display the Strong's number, with callbacks to the click event handler.
+
+							var language = ""; // Which language? "greek" or "hebrew"
+							var number = 0; // Strongs number.
 
 							if(node.hasAttribute("hebrew")) {
+								language = "hebrew";
 								number = node.getAttribute("hebrew");
 							}
 							else if(node.hasAttribute("greek")) {
+								language = "greek";
 								number = node.getAttribute("greek");
 							}
 							else if(node.hasAttribute("number")) {
+								// If the attribute is just called number, use the render context to determine what the language should be.
+								language = render_context["language"];
 								number = node.getAttribute("number");
 							}
+							else {
+								throw "no strongs number in strongs element";
+							}
 
-							result += "<sub>" + number + "</sub>";
+							// Number as actual integer, maybe stripping leading '*'.
+							var integer = parseInt(number.replace("*", ""));
+
+							result += "<a href='javascript:openStrongs(\"" + language + "\", " + integer + ")'><sub>" + number + "</sub></a>";
+						}
+					}
+					else if(node.nodeName == "link" && render_context["type"] == "strongs") {
+						// Link to a Strongs reference.
+						if(node.hasAttribute("target")) {
+							var reference = node.getAttribute("target");
+							// Parse reference.
+							var language = (reference.charAt(0) == "H" ? "hebrew" : "greek");
+							var number = parseInt(reference.substring(1));
+							// Make link.
+							result += "<a href='javascript:openStrongs(\"" + language + "\", " + number + ")'>";
+						}
+
+						if (node.childNodes[0] != null) {
+							// Show the word.
+							base_result = node.childNodes[0].nodeValue;
+							result += base_result;
+						}
+
+						if(node.hasAttribute("target")) {
+							result += "</a>";
 						}
 					}
 				}
@@ -308,6 +421,8 @@
 			</p>
 		</form>
 		<div id = "responseArea">
+		</div>
+		<div id="strongsArea">
 		</div>
 	</body>
 </html>
