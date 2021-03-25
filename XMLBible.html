@@ -116,6 +116,7 @@
 					}
 					else {
 						document.all.responseArea.innerHTML += "<b><i>Internal error: " + error + "<i></b>";
+						console.log(error);
 					}
 				}
 			}
@@ -276,6 +277,7 @@
 				}
 				catch(error) {
 					document.getElementById("strongsArea").innerHTML = "<b><i>Internal error: " + error + "</i></b>";
+					console.log(error);
 				}
 			}
 
@@ -307,7 +309,7 @@
 						result += '<span style="' + node.getAttribute("css") + '">';
 						// Recursively render everything that needs to be styled.
 						for (n=0; n < node.childNodes.length; n++) {
-							var rendered = getNodeRendered(node.childNodes[n]);
+							var rendered = getNodeRendered(node.childNodes[n], render_context);
 							base_result += rendered["base_text"];
 							result += rendered["text"];
 						}
