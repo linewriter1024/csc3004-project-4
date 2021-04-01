@@ -9,6 +9,18 @@
 	<head>
 		<meta charset="utf-8">
 		<title>XML Bible Demo - MVNU</title>
+		<style type="text/css">
+			#left {
+				max-width: 72%;
+			}
+			#right {
+				position: absolute;
+				top: 0;
+				right: 0;
+				max-width: 25%;
+			}
+		</style>
+
 		<script type="text/javascript">
 			function setup() {
 				// location of XML Bible files, must be on same web server
@@ -354,13 +366,20 @@
 								throw "no strongs number in strongs element";
 							}
 
-							// Display links to each number.
+							result += "<sub>";
+
+							// Render links to each number.
+							var links = [];
 							for(const number of numbers.split(" ")) {
 								// Number as actual integer, maybe stripping leading '*'.
 								var integer = parseInt(number.replace("*", ""));
 
-								result += "<a href='javascript:openStrongs(\"" + language + "\", " + integer + ")'><sub>" + number + "</sub></a>";
+								links.push("<a href='javascript:openStrongs(\"" + language + "\", " + integer + ")'>" + number + "</a>");
 							}
+							// Join links with spaces between.
+							result += links.join(" ");
+
+							result += "</sub>";
 						}
 					}
 					else if(node.nodeName == "link" && render_context["type"] == "strongs") {
@@ -396,46 +415,50 @@
 	</head>
 
 	<body onLoad="setup()">
-		<form onsubmit="return false">
-			<h1>Bible Search from XML files</h1>
-			<table>
-				<TR>
-					<TD ALIGN=RIGHT VALIGN=TOP>Bible Version</TD>
-					<TD ALIGN=LEFT VALIGN=TOP>
-						<select name="version" id="version">
-							<option value="kjv">King James Version
-							<option value="web">World English Bible
-						</select>
-					</TD>
-				</TR>
-				<TR>
-					<TD ALIGN=RIGHT VALIGN=TOP>Book Number</TD>
-					<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="book" TYPE="text" MAXLENGTH=2  id=book></TD>
-				</TR>
-				<TR>
-					<TD ALIGN=RIGHT VALIGN=TOP>Chapter</TD>
-					<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="chapter" TYPE="text" MAXLENGTH=3  id=chapter></TD>
-				</TR>
-				<TR>
-					<TD ALIGN=RIGHT VALIGN=TOP>Verse</TD>
-					<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="verse" TYPE="text" MAXLENGTH=3 id=verse></TD>
-				</TR>
-				<TR>
-					<TD ALIGN=RIGHT VALIGN=TOP>Number of Verses</TD>
-					<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="versenum" TYPE="text" MAXLENGTH=3 id=versenum></TD>
-				</TR>
-				<TR>
-					<TD ALIGN=RIGHT VALIGN=TOP>Include Strong's References</TD>
-					<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="include_strongs" id=include_strongs type="checkbox"></TD>
-				</TR>
-			</table>
-			<p>
-				<input type="submit" onclick="javascript: getResponse()" name="submit" value="Submit" />
-			</p>
-		</form>
-		<div id = "responseArea">
+		<div id="left">
+			<form onsubmit="return false">
+				<h1>Bible Search from XML files</h1>
+				<table>
+					<TR>
+						<TD ALIGN=RIGHT VALIGN=TOP>Bible Version</TD>
+						<TD ALIGN=LEFT VALIGN=TOP>
+							<select name="version" id="version">
+								<option value="kjv">King James Version
+								<option value="web">World English Bible
+							</select>
+						</TD>
+					</TR>
+					<TR>
+						<TD ALIGN=RIGHT VALIGN=TOP>Book Number</TD>
+						<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="book" TYPE="text" MAXLENGTH=2  id=book></TD>
+					</TR>
+					<TR>
+						<TD ALIGN=RIGHT VALIGN=TOP>Chapter</TD>
+						<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="chapter" TYPE="text" MAXLENGTH=3  id=chapter></TD>
+					</TR>
+					<TR>
+						<TD ALIGN=RIGHT VALIGN=TOP>Verse</TD>
+						<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="verse" TYPE="text" MAXLENGTH=3 id=verse></TD>
+					</TR>
+					<TR>
+						<TD ALIGN=RIGHT VALIGN=TOP>Number of Verses</TD>
+						<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="versenum" TYPE="text" MAXLENGTH=3 id=versenum></TD>
+					</TR>
+					<TR>
+						<TD ALIGN=RIGHT VALIGN=TOP>Include Strong's References</TD>
+						<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="include_strongs" id=include_strongs type="checkbox"></TD>
+					</TR>
+				</table>
+				<p>
+					<input type="submit" onclick="javascript: getResponse()" name="submit" value="Submit" />
+				</p>
+			</form>
+			<div id="responseArea">
+			</div>
 		</div>
-		<div id="strongsArea">
+		<div id="right">
+			<div id="strongsArea">
+			</div>
 		</div>
 	</body>
 </html>
