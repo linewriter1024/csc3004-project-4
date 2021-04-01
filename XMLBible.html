@@ -20,6 +20,9 @@
 					"kjv": "kjv",
 					"web": "web",
 				};
+
+				// Which book is the start of the New Testament?
+				startOfNT = 40;
 			}
 
 			function makeXMLHttpRequest() {
@@ -139,6 +142,12 @@
 				return book.getAttribute("name") + " " + chapter.getAttribute("number");
 			}
 
+			// Get the default language (hebrew or greek) for the specified book.
+			function getBookDefaultLanguage(b) {
+				// OT is hebrew, NT is greek.
+				return (b < startOfNT ? "hebrew" : "greek");
+			}
+
 			// Get <count> verses starting at b:c:v.
 			// b is irrelevant here, as the book that is loaded in xmlDoc will always be b.
 			function getVerses(xmlDoc, b, c, v, count) {
@@ -176,8 +185,7 @@
 						// Rendered text with appropriate context.
 						"text": renderElement(verse, {
 							"type": "verse",
-							// Default language can be simply determined: if book < 40 (Matthew) then in OT so "hebrew", else in NT so "greek".
-							"language": (b < 40 ? "hebrew" : "greek"),
+							"language": getBookDefaultLanguage(b),
 						}),
 					});
 
@@ -327,29 +335,32 @@
 							// Get and display the Strong's number, with callbacks to the click event handler.
 
 							var language = ""; // Which language? "greek" or "hebrew"
-							var number = 0; // Strongs number.
+							var numbers = ""; // Strongs number(s), there can be multiple in one attribute as in KJV 2 Samuel 5:2.
 
 							if(node.hasAttribute("hebrew")) {
 								language = "hebrew";
-								number = node.getAttribute("hebrew");
+								numbers = node.getAttribute("hebrew");
 							}
 							else if(node.hasAttribute("greek")) {
 								language = "greek";
-								number = node.getAttribute("greek");
+								numbers = node.getAttribute("greek");
 							}
 							else if(node.hasAttribute("number")) {
 								// If the attribute is just called number, use the render context to determine what the language should be.
 								language = render_context["language"];
-								number = node.getAttribute("number");
+								numbers = node.getAttribute("number");
 							}
 							else {
 								throw "no strongs number in strongs element";
 							}
 
-							// Number as actual integer, maybe stripping leading '*'.
-							var integer = parseInt(number.replace("*", ""));
+							// Display links to each number.
+							for(const number of numbers.split(" ")) {
+								// Number as actual integer, maybe stripping leading '*'.
+								var integer = parseInt(number.replace("*", ""));
 
-							result += "<a href='javascript:openStrongs(\"" + language + "\", " + integer + ")'><sub>" + number + "</sub></a>";
+								result += "<a href='javascript:openStrongs(\"" + language + "\", " + integer + ")'><sub>" + number + "</sub></a>";
+							}
 						}
 					}
 					else if(node.nodeName == "link" && render_context["type"] == "strongs") {
