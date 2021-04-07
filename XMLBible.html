@@ -312,6 +312,16 @@
 				// Only the text parts.
 				var base_result = "";
 
+				// Recursively render a sub node.
+				// Updates result and base_result.
+				function renderSubNode(node) {
+					for(const child of node.childNodes) {
+						var rendered = getNodeRendered(child, render_context);
+						base_result += rendered["base_text"];
+						result += rendered["text"];
+					}
+				}
+
 				if (node.nodeType == 3) {
 					// type 3: text node, just display
 					result += node.nodeValue;
@@ -321,27 +331,22 @@
 					// type 1: tag, parse it
 					if (node.nodeName == "em") {
 						result += "<i>";
-						base_result = node.childNodes[0].nodeValue
-						result += base_result;
+						renderSubNode(node);
 						result += "</i>";
+					}
+					else if(node.nodeName == "strong") {
+						result += "<b>";
+						renderSubNode(node);
+						result += "</b>";
 					}
 					else if (node.nodeName == "STYLE") {
 						result += '<span style="' + node.getAttribute("css") + '">';
-						// Recursively render everything that needs to be styled.
-						for (n=0; n < node.childNodes.length; n++) {
-							var rendered = getNodeRendered(node.childNodes[n], render_context);
-							base_result += rendered["base_text"];
-							result += rendered["text"];
-						}
+						renderSubNode(node);
 						result += "</span>";
 					}
 					else if (node.nodeName == "strongs" && render_context["type"] == "verse") {
-						// Word with a Strong's reference.
-						if (node.childNodes[0] != null) {
-							// Show the word.
-							base_result = node.childNodes[0].nodeValue;
-							result += base_result;
-						}
+						// Word with a Strong's reference, render the word and include links after it if enabled.
+						renderSubNode(node);
 
 						if(document.getElementById("include_strongs").checked) {
 							// Get and display the Strong's number, with callbacks to the click event handler.
@@ -383,7 +388,8 @@
 						}
 					}
 					else if(node.nodeName == "link" && render_context["type"] == "strongs") {
-						// Link to a Strongs reference.
+						// Link to a Strongs reference, render as hyperlink.
+
 						if(node.hasAttribute("target")) {
 							var reference = node.getAttribute("target");
 							// Parse reference.
@@ -393,11 +399,7 @@
 							result += "<a href='javascript:openStrongs(\"" + language + "\", " + number + ")'>";
 						}
 
-						if (node.childNodes[0] != null) {
-							// Show the word.
-							base_result = node.childNodes[0].nodeValue;
-							result += base_result;
-						}
+						renderSubNode(node);
 
 						if(node.hasAttribute("target")) {
 							result += "</a>";
