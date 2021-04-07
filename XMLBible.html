@@ -227,13 +227,13 @@
 
 			// Get an element rendered as HTML with automatically processed whitespacing.
 			// Passes render_context to getNodeRendered for rendering.
-			function renderElement(verse, render_context) {
+			function renderElement(element, render_context) {
 				var text = "";
 
-				// Render each node inside the verse.
+				// Render each node inside the element.
 				// Parse punctuation with regex to perform the correct spacing.
 				var was_punctuation_before = true; // Was there punctuation before the current node?
-				for(const node of verse.childNodes) {
+				for(const node of element.childNodes) {
 					// Render the node.
 					var rendering = getNodeRendered(node, render_context);
 
