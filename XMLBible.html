@@ -10,14 +10,40 @@
 		<meta charset="utf-8">
 		<title>XML Bible Demo - MVNU</title>
 		<style type="text/css">
-			#left {
-				max-width: 72%;
+			body {
+				background: #eee;
 			}
-			#right {
-				position: absolute;
-				top: 0;
-				right: 0;
-				max-width: 25%;
+
+			.container {
+				display: flex;
+			}
+
+			.information {
+				padding-bottom: 1vh;
+			}
+
+			.information > h1 {
+				text-align: center;
+				font-size: 1.5em;
+				padding: 0;
+				margin: 0;
+			}
+
+			.information > div {
+				overflow: auto;
+				max-height: 45vh;
+			}
+
+			.horizontal {
+				flex-direction: row;
+			}
+
+			.vertical {
+				flex-direction: column;
+			}
+
+			.wide {
+				min-width: 60%;
 			}
 		</style>
 
@@ -35,6 +61,86 @@
 
 				// Which book is the start of the New Testament?
 				startOfNT = 40;
+
+				// Array of book names.
+				bookNames = [
+					"Genesis",
+					"Exodus",
+					"Leviticus",
+					"Numbers",
+					"Deuteronomy",
+					"Joshua",
+					"Judges",
+					"Ruth",
+					"1 Samuel",
+					"2 Samuel",
+					"1 Kings",
+					"2 Kings",
+					"1 Chronicles",
+					"2 Chronicles",
+					"Ezra",
+					"Nehemiah",
+					"Esther",
+					"Job",
+					"Psalms",
+					"Proverbs",
+					"Ecclesiastes",
+					"Song of Solomon",
+					"Isaiah",
+					"Jeremiah",
+					"Lamentations",
+					"Ezekiel",
+					"Daniel",
+					"Hosea",
+					"Joel",
+					"Amos",
+					"Obadiah",
+					"Jonah",
+					"Micah",
+					"Nahum",
+					"Habakkuk",
+					"Zephaniah",
+					"Haggai",
+					"Zechariah",
+					"Malachi",
+					"Matthew",
+					"Mark",
+					"Luke",
+					"John",
+					"Acts",
+					"Romans",
+					"1 Corinthians",
+					"2 Corinthians",
+					"Galatians",
+					"Ephesians",
+					"Philippians",
+					"Colossians",
+					"1 Thessalonians",
+					"2 Thessalonians",
+					"1 Timothy",
+					"2 Timothy",
+					"Titus",
+					"Philemon",
+					"Hebrews",
+					"James",
+					"1 Peter",
+					"2 Peter",
+					"1 John",
+					"2 John",
+					"3 John",
+					"Jude",
+					"Revelation",
+				];
+
+				// Build selection options from book names.
+				for(var i = 0; i < bookNames.length; i++) {
+					var book_select = document.getElementById("book");
+					book_select.innerHTML += "<option value='" + (i + 1) + "'>" + bookNames[i];
+				}
+
+				// Load the concordances.
+				concordanceHebrew = getXMLDoc(biblePath + "/bible_refs_of_strongs_numbers/bible_refs_by_strongs_num_ot.xml");
+				concordanceGreek = getXMLDoc(biblePath + "/bible_refs_of_strongs_numbers/bible_refs_by_strongs_num_nt.xml");
 			}
 
 			function makeXMLHttpRequest() {
@@ -87,53 +193,41 @@
 				return (number - 1) % 100;
 			}
 
-			function getResponse () {
+			// Get the strongs concordance for a language.
+			function getStrongsConcordance(language) {
+				if(language == "hebrew") {
+					return concordanceHebrew;
+				}
+				else if(language == "greek") {
+					return concordanceGreek;
+				}
+				else {
+					throw ("bad language: " + language);
+				}
+			}
+
+			// Get the concordance item for a strongs number and language.
+			// Returns null if it is not found.
+			function getStrongsConcordanceItem(language, number) {
+				return getStrongsConcordance(language).querySelector("item[number='" + number + "']");
+			}
+
+			// Get the currently selected version.
+			function getCurrentVersion() {
+				return document.getElementById("version").value;
+			}
+
+			// Handle the form submission.
+			function getResponse() {
 				// Get input values from the form.
-				var version = document.getElementById("version").value;
-				var b = document.getElementById("book").value;
-				var c = document.getElementById("chapter").value;
+				var version = getCurrentVersion();
+				var b = parseInt(document.getElementById("book").value);
+				var c = parseInt(document.getElementById("chapter").value);
 				var v = parseInt(document.getElementById("verse").value);
 				var nv = parseInt(document.getElementById("versenum").value);
 
-				// Reset the display.
-				document.all.responseArea.innerHTML = " ";
-
-				try {
-					// Get the XML doc for this request.
-					var xmlDoc = getXMLDoc(getBookPath(version, b));
-
-					// Check top level error.
-					if(xmlDoc == null)
-						throw "no book";
-
-					// Show the verses.
-					var current_chapter = -1;
-					for(const verse of getVerses(xmlDoc, b, c, v, nv)) {
-						// Display header if the chapter changes.
-						if(verse["c"] != current_chapter) {
-							document.all.responseArea.innerHTML += "<h2>" + getChapterHeader(xmlDoc, verse["b"], verse["c"]) + "</h2>";
-							current_chapter = verse["c"];
-						}
-
-						// Display the verse.
-						document.all.responseArea.innerHTML += "<p><em>" + verse["v"] + ".</em> " + verse["text"] + "</p>";
-					}
-				}
-				catch(error) {
-					if (error == "no book") {
-						document.all.responseArea.innerHTML += "<b><i>No such book " + b + "</i></b>";
-					}
-					else if (error == "no chapter") {
-						document.all.responseArea.innerHTML += "<b><i>No such chapter " + c + "</i></b>";
-					}
-					else if (error == "no verse") {
-						document.all.responseArea.innerHTML += "<b><i>No such verse " + v + "</i></b>";
-					}
-					else {
-						document.all.responseArea.innerHTML += "<b><i>Internal error: " + error + "<i></b>";
-						console.log(error);
-					}
-				}
+				// Display the verses.
+				openVerses(version, b, c, v, nv);
 			}
 
 			function getNextSiblingOfTag(element, tag) {
@@ -158,6 +252,13 @@
 			function getBookDefaultLanguage(b) {
 				// OT is hebrew, NT is greek.
 				return (b < startOfNT ? "hebrew" : "greek");
+			}
+
+			// Get the human-readable name of a book.
+			function getBookName(b) {
+				// Convert to array index.
+				var index = b - 1;
+				return (index >= 0 && index < bookNames.length) ? bookNames[index] : "Invalid";
 			}
 
 			// Get <count> verses starting at b:c:v.
@@ -251,9 +352,79 @@
 				return text;
 			}
 
-			// Open a display of the Strong's reference for the language and number.
+			// Get a concordance item rendered as HTML.
+			// Passes render_context to getNodeRendered for rendering.
+			function renderConcordanceItem(element, render_context) {
+				var text = "<ul class='reference_list'>";
+
+				// Render each node (reference) in the concordance item.
+				// Add it to the list display.
+				for(const node of element.childNodes) {
+					var rendering = getNodeRendered(node, render_context);
+					text += "<li>" + rendering["text"] + "</li>";
+				}
+
+				text += "</ul>";
+				return text;
+			}
+
+			// Open a display of the given verses.
+			function openVerses(version, b, c, v, num_verses) {
+				var text = "";
+
+				try {
+					// Get the XML doc for this request.
+					var xmlDoc = getXMLDoc(getBookPath(version, b));
+
+					// Check top level error.
+					if(xmlDoc == null)
+						throw "no book";
+
+					// Show the verses.
+					var current_chapter = -1;
+					for(const verse of getVerses(xmlDoc, b, c, v, num_verses)) {
+						// Display header if the chapter changes.
+						if(verse["c"] != current_chapter) {
+							text += "<h2>" + getChapterHeader(xmlDoc, verse["b"], verse["c"]) + "</h2>";
+							current_chapter = verse["c"];
+						}
+
+						// Display the verse.
+						text += "<p><em>" + verse["v"] + ".</em> " + verse["text"] + "</p>";
+					}
+				}
+				catch(error) {
+					if (error == "no book") {
+						text += "<b><i>No such book " + b + "</i></b>";
+					}
+					else if (error == "no chapter") {
+						text += "<b><i>No such chapter " + c + "</i></b>";
+					}
+					else if (error == "no verse") {
+						text += "<b><i>No such verse " + v + "</i></b>";
+					}
+					else {
+						text += "<b><i>Internal error: " + error + "<i></b>";
+						console.log(error);
+					}
+				}
+
+				// Update display.
+				document.all.responseArea.innerHTML = text;
+			}
+
+			// Open a display of the Strong's reference and concordance for the language and strongs number.
 			// Language will be either "hebrew" or "greek".
 			function openStrongs(language, number) {
+				// Display the content.
+				openStrongsDisplay(language, number);
+				openConcordanceDisplay(language, number);
+				// Enable the side pane with the information.
+				document.getElementById("strongsInformation").style.visibility = "visible";
+			}
+
+			// Open a display of the Strong's reference for the language and number.
+			function openStrongsDisplay(language, number) {
 				try {
 					// Get the XML Dictionary.
 					var dictionary = getXMLDoc(getStrongsPath(language, number));
@@ -301,6 +472,23 @@
 				}
 			}
 
+			// Open a display of the Strong's concordance for the language and number.
+			function openConcordanceDisplay(language, number) {
+				try {
+					var item = getStrongsConcordanceItem(language, number);
+					if(item != null) {
+						document.getElementById("referencesArea").innerHTML = renderConcordanceItem(item, {
+							"type": "concordance_item",
+							"language": language,
+						});
+					}
+				}
+				catch(error) {
+					document.getElementById("referencesArea").innerHTML = "<b><i>Internal error: " + error + "</i></b>";
+					console.log(error);
+				}
+			}
+
 			/* Get a rendering of the text inside the node.
 			The render context specifies global attributes of the text being rendered.
 				type: "verse" or "strongs"
@@ -329,22 +517,34 @@
 				}
 				else if (node.nodeType == 1) {
 					// type 1: tag, parse it
-					if (node.nodeName == "em") {
+					// Canonicalize tag names.
+					var tagName = node.nodeName.toLowerCase();
+					// Render context type.
+					var rt = render_context["type"];
+
+					if (tagName == "em") {
 						result += "<i>";
 						renderSubNode(node);
 						result += "</i>";
 					}
-					else if(node.nodeName == "strong") {
+					else if(tagName == "strong") {
 						result += "<b>";
 						renderSubNode(node);
 						result += "</b>";
 					}
-					else if (node.nodeName == "STYLE") {
+					else if (tagName == "style") {
 						result += '<span style="' + node.getAttribute("css") + '">';
 						renderSubNode(node);
 						result += "</span>";
 					}
-					else if (node.nodeName == "strongs" && render_context["type"] == "verse") {
+					else if (rt == "verse" && tagName == "note") {
+						if(document.getElementById("include_notes").checked) {
+							result += "<sub>";
+							renderSubNode(node);
+							result += "</sub>";
+						}
+					}
+					else if (rt == "verse" && tagName == "strongs") {
 						// Word with a Strong's reference, render the word and include links after it if enabled.
 						renderSubNode(node);
 
@@ -387,7 +587,7 @@
 							result += "</sub>";
 						}
 					}
-					else if(node.nodeName == "link" && render_context["type"] == "strongs") {
+					else if(rt == "strongs" && node.nodeName == "link") {
 						// Link to a Strongs reference, render as hyperlink.
 
 						if(node.hasAttribute("target")) {
@@ -405,6 +605,20 @@
 							result += "</a>";
 						}
 					}
+					else if(rt == "concordance_item" && node.nodeName == "ref") {
+						// Link to a verse, render as hyperlink.
+						var b = parseInt(node.getAttribute("b"));
+						var c = parseInt(node.getAttribute("ch"));
+						var v = parseInt(node.getAttribute("v"));
+
+						result += "<a href='javascript:openVerses(\"" + getCurrentVersion() + "\", " + b + "," + c + "," + v + ", 1)'>";
+						result += getBookName(b) + " " + c + ":" + v;
+						result += "</a>";
+					}
+					else {
+						// Unknown element, render as plain text node.
+						renderSubNode(node);
+					}
 				}
 
 				// Return all information about the rendering & results.
@@ -417,49 +631,65 @@
 	</head>
 
 	<body onLoad="setup()">
-		<div id="left">
-			<form onsubmit="return false">
-				<h1>Bible Search from XML files</h1>
-				<table>
-					<TR>
-						<TD ALIGN=RIGHT VALIGN=TOP>Bible Version</TD>
-						<TD ALIGN=LEFT VALIGN=TOP>
-							<select name="version" id="version">
-								<option value="kjv">King James Version
-								<option value="web">World English Bible
-							</select>
-						</TD>
-					</TR>
-					<TR>
-						<TD ALIGN=RIGHT VALIGN=TOP>Book Number</TD>
-						<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="book" TYPE="text" MAXLENGTH=2  id=book></TD>
-					</TR>
-					<TR>
-						<TD ALIGN=RIGHT VALIGN=TOP>Chapter</TD>
-						<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="chapter" TYPE="text" MAXLENGTH=3  id=chapter></TD>
-					</TR>
-					<TR>
-						<TD ALIGN=RIGHT VALIGN=TOP>Verse</TD>
-						<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="verse" TYPE="text" MAXLENGTH=3 id=verse></TD>
-					</TR>
-					<TR>
-						<TD ALIGN=RIGHT VALIGN=TOP>Number of Verses</TD>
-						<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="versenum" TYPE="text" MAXLENGTH=3 id=versenum></TD>
-					</TR>
-					<TR>
-						<TD ALIGN=RIGHT VALIGN=TOP>Include Strong's References</TD>
-						<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="include_strongs" id=include_strongs type="checkbox"></TD>
-					</TR>
-				</table>
-				<p>
-					<input type="submit" onclick="javascript: getResponse()" name="submit" value="Submit" />
-				</p>
-			</form>
-			<div id="responseArea">
+		<div class="container horizontal">
+			<div class="container vertical wide">
+				<div>
+					<form onsubmit="return false">
+						<h1>Bible Search from XML files</h1>
+						<table>
+							<TR>
+								<TD ALIGN=RIGHT VALIGN=TOP>Bible Version</TD>
+								<TD ALIGN=LEFT VALIGN=TOP>
+									<select name="version" id="version">
+										<option value="kjv">King James Version
+										<option value="web">World English Bible
+									</select>
+								</TD>
+							</TR>
+							<TR>
+								<TD ALIGN=RIGHT VALIGN=TOP>Book Number</TD>
+								<TD ALIGN=LEFT VALIGN=TOP><select name="book" id="book"></select></TD>
+							</TR>
+							<TR>
+								<TD ALIGN=RIGHT VALIGN=TOP>Chapter</TD>
+								<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="chapter" TYPE="text" MAXLENGTH=3  id=chapter></TD>
+							</TR>
+							<TR>
+								<TD ALIGN=RIGHT VALIGN=TOP>Verse</TD>
+								<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="verse" TYPE="text" MAXLENGTH=3 id=verse></TD>
+							</TR>
+							<TR>
+								<TD ALIGN=RIGHT VALIGN=TOP>Number of Verses</TD>
+								<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="versenum" TYPE="text" MAXLENGTH=3 id=versenum></TD>
+							</TR>
+							<TR>
+								<TD ALIGN=RIGHT VALIGN=TOP>Include Strong's References</TD>
+								<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="include_strongs" id=include_strongs type="checkbox"></TD>
+							</TR>
+							<TR>
+								<TD ALIGN=RIGHT VALIGN=TOP>Include Notes</TD>
+								<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="include_strongs" id=include_notes type="checkbox" checked></TD>
+							</TR>
+						</table>
+						<p>
+							<input type="submit" onclick="javascript: getResponse()" name="submit" value="Submit" />
+						</p>
+					</form>
+				</div>
+				<div id="responseArea">
+				</div>
 			</div>
-		</div>
-		<div id="right">
-			<div id="strongsArea">
+			<div id="strongsInformation" class="container vertical" style="visibility: hidden;">
+				<div id="strongsParent" class="information">
+					<h1>Lexicon</h1>
+					<div id="strongsArea">
+					</div>
+				</div>
+				<div id="referencesParent" class="information">
+					<h1>Concordance</h1>
+					<div id="referencesArea">
+					</div>
+				</div>
 			</div>
 		</div>
 	</body>
