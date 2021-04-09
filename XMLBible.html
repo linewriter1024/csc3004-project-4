@@ -51,6 +51,23 @@
 			.reference_list {
 				padding-left: 0;
 			}
+
+			.input_group {
+				margin: 0.25em;
+			}
+
+			.input_group > h3 {
+				padding: 0;
+				margin: 0;
+				margin-bottom: 0.75em;
+				font-size: 1em;
+				text-align: center;
+			}
+
+			.input_group > h3 + input {
+				display: block;
+				margin: auto;
+			}
 		</style>
 
 		<script type="text/javascript">
@@ -149,6 +166,11 @@
 				concordanceGreek = getXMLDoc(biblePath + "/bible_refs_of_strongs_numbers/bible_refs_by_strongs_num_nt.xml");
 			}
 
+			// Return an error message rendered with appropriate HTML.
+			function renderErrorMessage(message) {
+				return "<b><i>" + message + "</i></b>";
+			}
+
 			function makeXMLHttpRequest() {
 				if (window.XMLHttpRequest) {
 					// Modern browsers (IE7+, Chrome, Firefox, etc.)
@@ -223,17 +245,40 @@
 				return document.getElementById("version").value;
 			}
 
+			// Parse a string as user input with a human readable name/label.
+			// Will throw a string with an error message if the input can't be converted to an integer.
+			function parseIntInput(string, name) {
+				// Check for emptiness.
+				if(string == "") {
+					throw("the " + name + " was not specified");
+				}
+
+				// Convert to integer and check if that worked.
+				var ret = parseInt(string);
+				if(isNaN(ret)) {
+					throw("the specified " + name + " was not a number");
+				}
+				return ret;
+			}
+
 			// Handle the form submission.
 			function getResponse() {
 				// Get input values from the form.
-				var version = getCurrentVersion();
-				var b = parseInt(document.getElementById("book").value);
-				var c = parseInt(document.getElementById("chapter").value);
-				var v = parseInt(document.getElementById("verse").value);
-				var nv = parseInt(document.getElementById("versenum").value);
+				try {
+					var version = getCurrentVersion();
+					var b = parseIntInput(document.getElementById("book").value, "book");
+					var c = parseIntInput(document.getElementById("chapter").value, "chapter");
+					var v = parseIntInput(document.getElementById("verse").value, "verse");
+					var nv = parseIntInput(document.getElementById("versenum").value, "number of verses");
+				}
+				catch(error) {
+					document.all.responseArea.innerHTML = renderErrorMessage("Input error: " + error);
+					// Return early if an error occurred.
+					return;
+				}
 
-				// Display the verses.
-				openVerses(version, b, c, v, nv);
+				// Catch did not return, so the input is valid enough; display the rendering.
+				document.all.responseArea.innerHTML = renderVerses(version, b, c, v, nv);
 			}
 
 			function getNextSiblingOfTag(element, tag) {
@@ -374,8 +419,9 @@
 				return text;
 			}
 
-			// Open a display of the given verses.
-			function openVerses(version, b, c, v, num_verses) {
+			// Render the specified verses to HTML.
+			// Will include error messages in the rendered HTML if the rendering is unsuccessful.
+			function renderVerses(version, b, c, v, num_verses) {
 				var text = "";
 
 				try {
@@ -401,22 +447,21 @@
 				}
 				catch(error) {
 					if (error == "no book") {
-						text += "<b><i>No such book " + b + "</i></b>";
+						text += renderErrorMessage("No such book " + b);
 					}
 					else if (error == "no chapter") {
-						text += "<b><i>No such chapter " + c + "</i></b>";
+						text += renderErrorMessage("No such chapter " + c);
 					}
 					else if (error == "no verse") {
-						text += "<b><i>No such verse " + v + "</i></b>";
+						text += renderErrorMessage("No such verse " + v);
 					}
 					else {
-						text += "<b><i>Internal error: " + error + "<i></b>";
+						text += renderErrorMessage("Internal error: " + error);
 						console.log(error);
 					}
 				}
 
-				// Update display.
-				document.all.responseArea.innerHTML = text;
+				return text;
 			}
 
 			// Open a display of the Strong's reference and concordance for the language and strongs number.
@@ -473,7 +518,7 @@
 					document.getElementById("strongsArea").innerHTML = text;
 				}
 				catch(error) {
-					document.getElementById("strongsArea").innerHTML = "<b><i>Internal error: " + error + "</i></b>";
+					document.getElementById("strongsArea").innerHTML = renderErrorMessage("Internal error: " + error);
 					console.log(error);
 				}
 			}
@@ -496,7 +541,7 @@
 			}
 
 			/* Get a rendering of the text inside the node.
-			The render context specifies global attributes of the text being rendered.
+			The render context is an object specifying global attributes of the text being rendered with properties:
 				type: "verse" or "strongs"
 				language: default language of any Strong's references, "greek" or "hebrew"
 			*/
@@ -640,46 +685,42 @@
 		<div class="container horizontal">
 			<div class="container vertical wide">
 				<div>
-					<form onsubmit="return false">
-						<h1>Bible Search from XML files</h1>
-						<table>
-							<TR>
-								<TD ALIGN=RIGHT VALIGN=TOP>Bible Version</TD>
-								<TD ALIGN=LEFT VALIGN=TOP>
-									<select name="version" id="version">
-										<option value="kjv">King James Version
-										<option value="web">World English Bible
-									</select>
-								</TD>
-							</TR>
-							<TR>
-								<TD ALIGN=RIGHT VALIGN=TOP>Book Number</TD>
-								<TD ALIGN=LEFT VALIGN=TOP><select name="book" id="book"></select></TD>
-							</TR>
-							<TR>
-								<TD ALIGN=RIGHT VALIGN=TOP>Chapter</TD>
-								<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="chapter" TYPE="text" MAXLENGTH=3  id=chapter></TD>
-							</TR>
-							<TR>
-								<TD ALIGN=RIGHT VALIGN=TOP>Verse</TD>
-								<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="verse" TYPE="text" MAXLENGTH=3 id=verse></TD>
-							</TR>
-							<TR>
-								<TD ALIGN=RIGHT VALIGN=TOP>Number of Verses</TD>
-								<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="versenum" TYPE="text" MAXLENGTH=3 id=versenum></TD>
-							</TR>
-							<TR>
-								<TD ALIGN=RIGHT VALIGN=TOP>Include Strong's References</TD>
-								<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="include_strongs" id=include_strongs type="checkbox"></TD>
-							</TR>
-							<TR>
-								<TD ALIGN=RIGHT VALIGN=TOP>Include Notes</TD>
-								<TD ALIGN=LEFT VALIGN=TOP><INPUT NAME="include_strongs" id=include_notes type="checkbox" checked></TD>
-							</TR>
-						</table>
-						<p>
+					<h1>Bible Browser</h1>
+					<form onsubmit="return false" class="container vertical">
+						<div class="input_group">
+							<h3>Bible Version</h3>
+							<select name="version" id="version">
+								<option value="kjv">King James Version
+								<option value="web">World English Bible
+							</select>
+						</div>
+						<div class="container horizontal">
+							<div class="input_group">
+								<h3>Book</h3>
+								<select name="book" id="book"></select>
+							</div>
+							<div class="input_group">
+								<h3>Chapter</h3>
+								<INPUT NAME="chapter" TYPE="text" MAXLENGTH=3 id=chapter style="width: 3em;">
+							</div>
+							<div class="input_group">
+								<h3>Starting Verse</h3>
+								<INPUT NAME="verse" TYPE="text" MAXLENGTH=3 id=verse style="width: 3em;">
+							</div>
+							<div class="input_group">
+								<h3>Number of Verses</h3>
+								<INPUT NAME="versenum" TYPE="text" MAXLENGTH=3 id=versenum value=1 style="width: 3em;">
+							</div>
+						</div>
+						<div class="input_group">
+							<INPUT NAME="include_strongs" id=include_strongs type="checkbox"> Include Strongs Numbers
+						</div>
+						<div class="input_group">
+							<INPUT NAME="include_notes" id=include_notes type="checkbox" checked> Include Notes
+						</div>
+						<div class="input_group">
 							<input type="submit" onclick="javascript: getResponse()" name="submit" value="Submit" />
-						</p>
+						</div>
 					</form>
 				</div>
 				<div id="responseArea">
