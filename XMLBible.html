@@ -54,6 +54,7 @@
 
 			.input_group {
 				margin: 0.25em;
+				max-width: max-content;
 			}
 
 			.input_group > h3 {
@@ -67,6 +68,18 @@
 			.input_group > h3 + input {
 				display: block;
 				margin: auto;
+			}
+
+			#formArea {
+				background: #bbb;
+			}
+
+			#contentArea {
+				max-height: 80vh;
+			}
+
+			#responseArea {
+				overflow: auto;
 			}
 		</style>
 
@@ -263,7 +276,7 @@
 
 			// Handle the form submission.
 			function getResponse() {
-				// Get input values from the form.
+				// Safely get input values from the form.
 				try {
 					var version = getCurrentVersion();
 					var b = parseIntInput(document.getElementById("book").value, "book");
@@ -272,15 +285,18 @@
 					var nv = parseIntInput(document.getElementById("versenum").value, "number of verses");
 				}
 				catch(error) {
+					// Output an error message upon error.
 					document.all.responseArea.innerHTML = renderErrorMessage("Input error: " + error);
-					// Return early if an error occurred.
+					// Return early upon error.
 					return;
 				}
 
 				// Catch did not return, so the input is valid enough; display the rendering.
-				document.all.responseArea.innerHTML = renderVerses(version, b, c, v, nv);
+				openVerses(version, b, c, v, nv);
 			}
 
+			// Get the next tag node with tag name <tag> that is a sibling of a tag node <element>.
+			// Returns null if none found.
 			function getNextSiblingOfTag(element, tag) {
 				var next = element.nextSibling;
 				while(next != null && next.nodeType != 1 && next.nodeName != tag) {
@@ -289,6 +305,7 @@
 				return next;
 			}
 
+			// Gets the chapter header text for a book and chapter from in the specified book XML doc.
 			function getChapterHeader(xmlDoc, b, c) {
 				var book = xmlDoc.getElementsByTagName("book")[0];
 				if (book == null)
@@ -417,6 +434,11 @@
 
 				text += "</ul>";
 				return text;
+			}
+
+			// Display the specified verses.
+			function openVerses(version, b, c, v, num_verses) {
+				document.all.responseArea.innerHTML = renderVerses(version, b, c, v, num_verses);
 			}
 
 			// Render the specified verses to HTML.
@@ -682,11 +704,10 @@
 	</head>
 
 	<body onLoad="setup()">
-		<div class="container horizontal">
-			<div class="container vertical wide">
-				<div>
-					<h1>Bible Browser</h1>
-					<form onsubmit="return false" class="container vertical">
+		<div class="container vertical">
+			<div id="formArea">
+				<form onsubmit="return false">
+					<div class="container horizontal">
 						<div class="input_group">
 							<h3>Bible Version</h3>
 							<select name="version" id="version">
@@ -694,23 +715,21 @@
 								<option value="web">World English Bible
 							</select>
 						</div>
-						<div class="container horizontal">
-							<div class="input_group">
-								<h3>Book</h3>
-								<select name="book" id="book"></select>
-							</div>
-							<div class="input_group">
-								<h3>Chapter</h3>
-								<INPUT NAME="chapter" TYPE="text" MAXLENGTH=3 id=chapter style="width: 3em;">
-							</div>
-							<div class="input_group">
-								<h3>Starting Verse</h3>
-								<INPUT NAME="verse" TYPE="text" MAXLENGTH=3 id=verse style="width: 3em;">
-							</div>
-							<div class="input_group">
-								<h3>Number of Verses</h3>
-								<INPUT NAME="versenum" TYPE="text" MAXLENGTH=3 id=versenum value=1 style="width: 3em;">
-							</div>
+						<div class="input_group">
+							<h3>Book</h3>
+							<select name="book" id="book"></select>
+						</div>
+						<div class="input_group">
+							<h3>Chapter</h3>
+							<INPUT NAME="chapter" TYPE="text" MAXLENGTH=3 id=chapter style="width: 3em;">
+						</div>
+						<div class="input_group">
+							<h3>Starting Verse</h3>
+							<INPUT NAME="verse" TYPE="text" MAXLENGTH=3 id=verse style="width: 3em;">
+						</div>
+						<div class="input_group">
+							<h3>Number of Verses</h3>
+							<INPUT NAME="versenum" TYPE="text" MAXLENGTH=3 id=versenum value=1 style="width: 3em;">
 						</div>
 						<div class="input_group">
 							<INPUT NAME="include_strongs" id=include_strongs type="checkbox"> Include Strongs Numbers
@@ -721,20 +740,22 @@
 						<div class="input_group">
 							<input type="submit" onclick="javascript: getResponse()" name="submit" value="Submit" />
 						</div>
-					</form>
-				</div>
-				<div id="responseArea">
-				</div>
-			</div>
-			<div id="strongsInformation" class="container vertical" style="visibility: hidden;">
-				<div id="strongsParent" class="information">
-					<h1>Lexicon</h1>
-					<div id="strongsArea">
 					</div>
+				</form>
+			</div>
+			<div id="contentArea" class="container horizontal">
+				<div id="responseArea" class="wide">
 				</div>
-				<div id="referencesParent" class="information">
-					<h1>Concordance</h1>
-					<div id="referencesArea">
+				<div id="strongsInformation" class="container vertical" style="visibility: hidden;">
+					<div id="strongsParent" class="information">
+						<h1>Lexicon</h1>
+						<div id="strongsArea">
+						</div>
+					</div>
+					<div id="referencesParent" class="information">
+						<h1>Concordance</h1>
+						<div id="referencesArea">
+						</div>
 					</div>
 				</div>
 			</div>
