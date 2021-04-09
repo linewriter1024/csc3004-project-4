@@ -10,30 +10,34 @@
 		<meta charset="utf-8">
 		<title>XML Bible Demo - MVNU</title>
 		<style type="text/css">
-			body {
+			html, body {
 				background: #ccc;
+				height: 100vh;
+				overflow: hidden;
+			}
+
+			div {
+				padding: 0;
+				margin: 0;
 			}
 
 			.container {
 				display: flex;
 			}
 
-			.information {
-				margin-bottom: 1em;
-				border: 2px solid green;
+			div.information {
+				border: 0.1em solid green;
 				padding-left: 0.5em;
+				overflow: auto;
+				flex: 0.5;
 			}
 
-			.information > h1 {
+			h1.information {
 				text-align: center;
 				font-size: 1.5em;
 				padding: 0;
 				margin: 0;
-			}
-
-			.information > div {
-				overflow: auto;
-				max-height: 40vh;
+				background-color: #bcb;
 			}
 
 			.horizontal {
@@ -42,6 +46,11 @@
 
 			.vertical {
 				flex-direction: column;
+			}
+
+			.centered {
+				justify-content: center;
+				align-items: center;
 			}
 
 			.wide {
@@ -72,14 +81,30 @@
 
 			#formArea {
 				background: #bbb;
+				margin-bottom: 1em;
+				padding: 0;
+				margin: 0;
+				flex: 0.1;
 			}
 
 			#contentArea {
-				max-height: 80vh;
+				padding: 0;
+				margin: 0;
+				flex: 0.85;
+				overflow: auto;
 			}
 
 			#responseArea {
 				overflow: auto;
+			}
+
+			#branding {
+				font-size: 1.5em;
+				margin: auto;
+				margin-right: 1em;
+				max-width: min-content;
+				height: 100%;
+				background-color: #bcb;
 			}
 		</style>
 
@@ -703,60 +728,57 @@
 		</script>
 	</head>
 
-	<body onLoad="setup()">
-		<div class="container vertical">
-			<div id="formArea">
-				<form onsubmit="return false">
-					<div class="container horizontal">
+	<body onLoad="setup()" class="container vertical">
+		<div id="formArea" class="container">
+			<form onsubmit="return false" class="container horizontal centered">
+				<h1 id="branding">Bible &amp; Concordance Lookup</h1>
+				<div class="container horizontal">
+					<div class="input_group">
+						<h3>Bible Version</h3>
+						<select name="version" id="version">
+							<option value="kjv">King James Version
+							<option value="web">World English Bible
+						</select>
+					</div>
+					<div class="input_group">
+						<h3>Book</h3>
+						<select name="book" id="book"></select>
+					</div>
+					<div class="input_group">
+						<h3>Chapter</h3>
+						<INPUT NAME="chapter" TYPE="text" MAXLENGTH=3 id=chapter style="width: 3em;">
+					</div>
+					<div class="input_group">
+						<h3>Verse</h3>
+						<INPUT NAME="verse" TYPE="text" MAXLENGTH=3 id=verse style="width: 3em;">
+					</div>
+					<div class="input_group">
+						<h3>Number of Verses</h3>
+						<INPUT NAME="versenum" TYPE="text" MAXLENGTH=3 id=versenum value=1 style="width: 3em;">
+					</div>
+					<div class="container vertical">
 						<div class="input_group">
-							<h3>Bible Version</h3>
-							<select name="version" id="version">
-								<option value="kjv">King James Version
-								<option value="web">World English Bible
-							</select>
+							<INPUT NAME="include_strongs" id=include_strongs type="checkbox"> Show Strong's numbers
 						</div>
 						<div class="input_group">
-							<h3>Book</h3>
-							<select name="book" id="book"></select>
+							<INPUT NAME="include_notes" id=include_notes type="checkbox" checked> Show annotations
 						</div>
 						<div class="input_group">
-							<h3>Chapter</h3>
-							<INPUT NAME="chapter" TYPE="text" MAXLENGTH=3 id=chapter style="width: 3em;">
-						</div>
-						<div class="input_group">
-							<h3>Starting Verse</h3>
-							<INPUT NAME="verse" TYPE="text" MAXLENGTH=3 id=verse style="width: 3em;">
-						</div>
-						<div class="input_group">
-							<h3>Number of Verses</h3>
-							<INPUT NAME="versenum" TYPE="text" MAXLENGTH=3 id=versenum value=1 style="width: 3em;">
-						</div>
-						<div class="input_group">
-							<INPUT NAME="include_strongs" id=include_strongs type="checkbox"> Include Strongs Numbers
-						</div>
-						<div class="input_group">
-							<INPUT NAME="include_notes" id=include_notes type="checkbox" checked> Include Notes
-						</div>
-						<div class="input_group">
-							<input type="submit" onclick="javascript: getResponse()" name="submit" value="Submit" />
+							<input type="submit" onclick="javascript: getResponse()" name="submit" value="Lookup" />
 						</div>
 					</div>
-				</form>
-			</div>
-			<div id="contentArea" class="container horizontal">
-				<div id="responseArea" class="wide">
 				</div>
-				<div id="strongsInformation" class="container vertical" style="visibility: hidden;">
-					<div id="strongsParent" class="information">
-						<h1>Lexicon</h1>
-						<div id="strongsArea">
-						</div>
-					</div>
-					<div id="referencesParent" class="information">
-						<h1>Concordance</h1>
-						<div id="referencesArea">
-						</div>
-					</div>
+			</form>
+		</div>
+		<div id="contentArea" class="container horizontal">
+			<div id="responseArea" class="wide">
+			</div>
+			<div id="strongsInformation" class="container vertical" style="visibility: hidden;">
+				<h1 class="information">Lexicon</h1>
+				<div id="strongsArea" class="information">
+				</div>
+				<h1 class="information">Concordance</h1>
+				<div id="referencesArea" class="information">
 				</div>
 			</div>
 		</div>
