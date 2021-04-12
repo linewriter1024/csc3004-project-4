@@ -55,6 +55,7 @@
 
 			.wide {
 				min-width: 60%;
+				width: 100%;
 			}
 
 			.reference_list {
@@ -121,7 +122,12 @@
 				};
 
 				// Which book is the start of the New Testament?
-				startOfNT = 40;
+				startOfNT = 40; // Matthew
+
+				// Regex matching any punctuation that is a direct continuation of the previous text, i.e. it does not need a space before it.
+				continuationPunctuation = /^[,.?\-"':;” ]/;
+				// Regex matching any punctuation that directly precedes the following text, i.e. it does not need a space after it.
+				precedingPunctuation = /[“ ]+$/;
 
 				// Array of book names.
 				bookNames = [
@@ -244,10 +250,10 @@
 				// 0 is 1-100, 1 is 101-200, etc.
 				var indexNumber = Math.trunc((number - 1) / 100);
 				if(language == "hebrew") {
-					return biblePath + "/" + "heb_strongs/heb" + indexNumber + ".xml";
+					return biblePath + "/heb_strongs/heb" + indexNumber + ".xml";
 				}
 				else if(language == "greek") {
-					return biblePath + "/" + "greek_strongs/grk" + indexNumber + ".xml";
+					return biblePath + "/greek_strongs/grk" + indexNumber + ".xml";
 				}
 				else {
 					throw ("bad language: " + language);
@@ -283,6 +289,21 @@
 				return document.getElementById("version").value;
 			}
 
+			// Returns whether Strong's numbers are enabled.
+			function getStrongsEnabled() {
+				return document.getElementById("include_strongs").checked;
+			}
+
+			// Show the Strong's display pane if it is hidden.
+			function showStrongsPane() {
+				document.getElementById("strongsInformation").style.removeProperty("display");
+			}
+
+			// Hide the Strong's display pane if it is visible.
+			function hideStrongsPane() {
+				document.getElementById("strongsInformation").style.display = "none";
+			}
+
 			// Parse a string as user input with a human readable name/label.
 			// Will throw a string with an error message if the input can't be converted to an integer.
 			function parseIntInput(string, name) {
@@ -310,7 +331,6 @@
 					var nv = parseIntInput(document.getElementById("versenum").value, "number of verses");
 				}
 				catch(error) {
-					// Output an error message upon error.
 					document.all.responseArea.innerHTML = renderErrorMessage("Input error: " + error);
 					// Return early upon error.
 					return;
@@ -318,6 +338,11 @@
 
 				// Catch did not return, so the input is valid enough; display the rendering.
 				openVerses(version, b, c, v, nv);
+
+				// If the user does not have Strong's numbers enabled, ensure the display is hidden.
+				if(!getStrongsEnabled()) {
+					hideStrongsPane();
+				}
 			}
 
 			// Get the next tag node with tag name <tag> that is a sibling of a tag node <element>.
@@ -419,7 +444,7 @@
 				return result;
 			}
 
-			// Get an element rendered as HTML with automatically processed whitespacing.
+			// Get an element rendered as primarily textual HTML with automatically processed whitespacing.
 			// Passes render_context to getNodeRendered for rendering.
 			function renderElement(element, render_context) {
 				var text = "";
@@ -432,20 +457,20 @@
 					var rendering = getNodeRendered(node, render_context);
 
 					// Check if this is punctuation that needs no space before it.
-					var is_punctuation = /^[,.?\-"':;” ]/.test(rendering["base_text"]);
+					var is_punctuation = continuationPunctuation.test(rendering["base_text"]);
 
 					// Place the node into the text.
 					// Including leading space unless this node is punctuation that needs no space or has punctuation that doesn't want a trailing space before it.
 					text += ((is_punctuation || was_punctuation_before) ? "" : " ") + rendering["text"];
 
 					// Check if this node means that there doesn't need to be a space for the next node (opening quote, for example.)
-					was_punctuation_before = /[“ ]+$/.test(rendering["base_text"]);
+					was_punctuation_before = precedingPunctuation.test(rendering["base_text"]);
 				}
 
 				return text;
 			}
 
-			// Get a concordance item rendered as HTML.
+			// Get a concordance item rendered as an HTML unordered list.
 			// Passes render_context to getNodeRendered for rendering.
 			function renderConcordanceItem(element, render_context) {
 				var text = "<ul class='reference_list'>";
@@ -472,7 +497,7 @@
 				var text = "";
 
 				try {
-					// Get the XML doc for this request.
+					// Get the XML doc for this book.
 					var xmlDoc = getXMLDoc(getBookPath(version, b));
 
 					// Check top level error.
@@ -512,13 +537,13 @@
 			}
 
 			// Open a display of the Strong's reference and concordance for the language and strongs number.
-			// Language will be either "hebrew" or "greek".
+			// Language can be either "hebrew" or "greek".
 			function openStrongs(language, number) {
 				// Display the content.
 				openStrongsDisplay(language, number);
 				openConcordanceDisplay(language, number);
 				// Enable the side pane with the information.
-				document.getElementById("strongsInformation").style.visibility = "visible";
+				showStrongsPane();
 			}
 
 			// Open a display of the Strong's reference for the language and number.
@@ -574,7 +599,7 @@
 			function openConcordanceDisplay(language, number) {
 				try {
 					var item = getStrongsConcordanceItem(language, number);
-					if(item != null) {
+					if(item) {
 						document.getElementById("referencesArea").innerHTML = renderConcordanceItem(item, {
 							"type": "concordance_item",
 							"language": language,
@@ -582,7 +607,7 @@
 					}
 				}
 				catch(error) {
-					document.getElementById("referencesArea").innerHTML = "<b><i>Internal error: " + error + "</i></b>";
+					document.getElementById("referencesArea").innerHTML = renderErrorMessage("Internal error: " + error);
 					console.log(error);
 				}
 			}
@@ -646,7 +671,7 @@
 						// Word with a Strong's reference, render the word and include links after it if enabled.
 						renderSubNode(node);
 
-						if(document.getElementById("include_strongs").checked) {
+						if(getStrongsEnabled()) {
 							// Get and display the Strong's number, with callbacks to the click event handler.
 
 							var language = ""; // Which language? "greek" or "hebrew"
@@ -747,15 +772,15 @@
 					</div>
 					<div class="input_group">
 						<h3>Chapter</h3>
-						<INPUT NAME="chapter" TYPE="text" MAXLENGTH=3 id=chapter style="width: 3em;">
+						<INPUT NAME="chapter" TYPE="number" min=1 id=chapter style="width: 3em;">
 					</div>
 					<div class="input_group">
 						<h3>Verse</h3>
-						<INPUT NAME="verse" TYPE="text" MAXLENGTH=3 id=verse style="width: 3em;">
+						<INPUT NAME="verse" TYPE="number" min=1 id=verse style="width: 3em;">
 					</div>
 					<div class="input_group">
 						<h3>Number of Verses</h3>
-						<INPUT NAME="versenum" TYPE="text" MAXLENGTH=3 id=versenum value=1 style="width: 3em;">
+						<INPUT NAME="versenum" TYPE="number" min=1 id=versenum value=1 style="width: 3em;">
 					</div>
 					<div class="container vertical">
 						<div class="input_group">
@@ -774,7 +799,7 @@
 		<div id="contentArea" class="container horizontal">
 			<div id="responseArea" class="wide">
 			</div>
-			<div id="strongsInformation" class="container vertical" style="visibility: hidden;">
+			<div id="strongsInformation" class="container vertical" style="display: none;">
 				<h1 class="information">Lexicon</h1>
 				<div id="strongsArea" class="information">
 				</div>
