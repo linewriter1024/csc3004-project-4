@@ -652,6 +652,7 @@
 							var language = ""; // Which language? "greek" or "hebrew"
 							var numbers = ""; // Strongs number(s), there can be multiple in one attribute as in KJV 2 Samuel 5:2.
 
+							// Try all possible attributes to find the number and language.
 							if(node.hasAttribute("hebrew")) {
 								language = "hebrew";
 								numbers = node.getAttribute("hebrew");
