@@ -11,7 +11,7 @@
 		<title>XML Bible Demo - MVNU</title>
 		<style type="text/css">
 			html, body {
-				background: #ccc;
+				background: #aaa;
 				height: 100vh;
 				overflow: hidden;
 			}
@@ -82,10 +82,10 @@
 
 			#formArea {
 				background: #bbb;
-				margin-bottom: 1em;
 				padding: 0;
 				margin: 0;
 				flex: 0.1;
+				margin-bottom: 0.25em;
 			}
 
 			#contentArea {
@@ -93,6 +93,7 @@
 				margin: 0;
 				flex: 0.85;
 				overflow: auto;
+				background: #ccc;
 			}
 
 			#responseArea {
@@ -519,13 +520,13 @@
 				}
 				catch(error) {
 					if (error == "no book") {
-						text += renderErrorMessage("No such book " + b);
+						text += renderErrorMessage("No book " + b + " found");
 					}
 					else if (error == "no chapter") {
-						text += renderErrorMessage("No such chapter " + c);
+						text += renderErrorMessage("No chapter " + c + " found in " + getBookName(b));
 					}
 					else if (error == "no verse") {
-						text += renderErrorMessage("No such verse " + v);
+						text += renderErrorMessage("No verse " + v + " found in " + getBookName(b) + " " + c);
 					}
 					else {
 						text += renderErrorMessage("Internal error: " + error);
