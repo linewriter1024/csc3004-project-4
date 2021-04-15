@@ -206,9 +206,11 @@
 					book_select.innerHTML += "<option value='" + (i + 1) + "'>" + bookNames[i];
 				}
 
-				// Load the concordances.
-				concordanceHebrew = getXMLDoc(biblePath + "/bible_refs_of_strongs_numbers/bible_refs_by_strongs_num_ot.xml");
-				concordanceGreek = getXMLDoc(biblePath + "/bible_refs_of_strongs_numbers/bible_refs_by_strongs_num_nt.xml");
+				// Load the concordances by language.
+				concordances = {
+					"hebrew": getXMLDoc(biblePath + "/bible_refs_of_strongs_numbers/bible_refs_by_strongs_num_ot.xml"),
+					"greek": getXMLDoc(biblePath + "/bible_refs_of_strongs_numbers/bible_refs_by_strongs_num_nt.xml"),
+				}
 			}
 
 			// Return an error message rendered with appropriate HTML.
@@ -268,11 +270,8 @@
 
 			// Get the strongs concordance for a language.
 			function getStrongsConcordance(language) {
-				if(language == "hebrew") {
-					return concordanceHebrew;
-				}
-				else if(language == "greek") {
-					return concordanceGreek;
+				if(language in concordances) {
+					return concordances[language];
 				}
 				else {
 					throw ("bad language: " + language);
